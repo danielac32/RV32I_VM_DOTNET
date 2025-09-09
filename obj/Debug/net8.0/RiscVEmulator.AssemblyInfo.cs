@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("RiscVEmulator")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+940371d78d0689f573c1b92f643724ceb18537ac")]
 [assembly: System.Reflection.AssemblyProductAttribute("RiscVEmulator")]
 [assembly: System.Reflection.AssemblyTitleAttribute("RiscVEmulator")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -12,3 +12,4 @@
 /home/daniel/dotnet_projects/RiscVEmulator/obj/Debug/net8.0/RiscVEmulator.pdb
 /home/daniel/dotnet_projects/RiscVEmulator/obj/Debug/net8.0/RiscVEmulator.genruntimeconfig.cache
 /home/daniel/dotnet_projects/RiscVEmulator/obj/Debug/net8.0/ref/RiscVEmulator.dll
+/home/daniel/dotnet_projects/RiscVEmulator/obj/Debug/net8.0/RiscVEmulator.sourcelink.json
