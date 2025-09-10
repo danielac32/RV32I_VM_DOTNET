@@ -34,7 +34,7 @@ public class Rv32Emulator
         // 3. Crear el núcleo y asignar la memoria
         var rv32_core = new Rv32Core
         {
-            Pc = 0x80000000,           // Dirección de inicio
+            Pc = Rv32Core.PROGRAM_COUNTER_START_VAL,           // Dirección de inicio
             Memory = ram               // Asignar el dispositivo de memoria
         };
         

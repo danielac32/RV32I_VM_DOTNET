@@ -436,8 +436,6 @@ private string GetInstructionName()
 
     private void ExecuteBranch()
     {
-
-        
         // B-type: inmediato de 12 bits (codificado en varios campos)
         JumpOffset = ((int)((Instruction >> 8) & 0xF) << 1) |    // bits 4:1
                      ((int)((Instruction >> 25) & 0x3F) << 5) |  // bits 10:5
