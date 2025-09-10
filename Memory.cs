@@ -12,7 +12,7 @@ public class RamDevice : IMemoryDevice
     }
 
 
-    /*
+    
     public uint Read(uint address)
     {
         if (address == UartAddress)
@@ -20,21 +20,22 @@ public class RamDevice : IMemoryDevice
             return 0;
         }
 
-        if (address >= BaseRam && address + 3 < BaseRam + _ram.Length)
+        if (address >= BaseRam && address < BaseRam + _ram.Length)
         {
-            int offset = (int)(address - BaseRam);
-            return _ram[offset]         | 
-                   ((uint)_ram[offset+1] << 8)  |
+            uint offset = (address - BaseRam);
+            return ((uint)_ram[offset+3] <<24) | 
                    ((uint)_ram[offset+2] << 16) |
-                   ((uint)_ram[offset+3] << 24);
+                   ((uint)_ram[offset+1] << 8)|
+                   (_ram[offset+0]);
+             
         }
 
         Console.WriteLine($"Error: Lectura en dirección inválida 0x{address:X}");
         return 0;
     }
-    */
+  
 
-
+/*
     public uint Read(uint address)
     {
         if (address == UartAddress)
@@ -52,9 +53,9 @@ public class RamDevice : IMemoryDevice
         Console.WriteLine($"Error: Lectura en dirección inválida 0x{address:X}");
         return 0;
     }
+*/
 
-
-/*
+ 
 public void Write(uint address, uint value, int width)
 {
     if (address == 0x300000) // UART
@@ -63,13 +64,13 @@ public void Write(uint address, uint value, int width)
         return;
     }
 
-    if (address < 0x80000000 || address + width > 0x80000000 + _ram.Length)
+    if (address < BaseRam || address + width > BaseRam + _ram.Length)
     {
         Console.WriteLine($"Error: Escritura inválida 0x{address:X}");
         return;
     }
 
-    int offset = (int)(address - 0x80000000);
+    uint offset =  (address - BaseRam);
 
     switch (width)
     {
@@ -94,7 +95,7 @@ public void Write(uint address, uint value, int width)
             break;
     }
 }
-*/
+ /*
     public void Write(uint address, uint value, int width)
     {
         if (address == UartAddress)
@@ -115,7 +116,7 @@ public void Write(uint address, uint value, int width)
 
         Console.WriteLine($"Error: Escritura en dirección inválida 0x{address:X}");
     }
-
+*/
     // Método para cargar el programa
     public void LoadProgram(string filePath)
     {

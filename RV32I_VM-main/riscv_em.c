@@ -883,10 +883,15 @@ uint32_t rv32_soc_read_mem(rv32_soc_td *rv32_soc, uint32_t address) {
     if (address >= BASE_RAM  && address < BASE_RAM + sizeof(rv32_soc->ram)) {
         // Lee 4 bytes consecutivos desde la RAM (little-endian)
         uint32_t value = 0;
-        value |= rv32_soc->ram[address - BASE_RAM];       // Byte 0 (LSB)
+        /*value |= rv32_soc->ram[address - BASE_RAM];       // Byte 0 (LSB)
         value |= rv32_soc->ram[address - BASE_RAM + 1] << 8;  // Byte 1
         value |= rv32_soc->ram[address - BASE_RAM + 2] << 16; // Byte 2
+        value |= rv32_soc->ram[address - BASE_RAM + 3] << 24; // Byte 3 (MSB)*/
+
         value |= rv32_soc->ram[address - BASE_RAM + 3] << 24; // Byte 3 (MSB)
+        value |= rv32_soc->ram[address - BASE_RAM + 2] << 16; // Byte 3 (MSB)
+        value |= rv32_soc->ram[address - BASE_RAM + 1] << 8; // Byte 3 (MSB)
+        value |= rv32_soc->ram[address - BASE_RAM] ; // Byte 3 (MSB)
         return value;
     }
     else {
@@ -911,9 +916,6 @@ void rv32_soc_write_mem(rv32_soc_td *rv32_soc, uint32_t address, uint32_t value,
         return;
     }
 
-    // Convertir a dirección relativa en el array de RAM (asumiendo que es uint32_t)
-    //uint32_t* mem = (uint32_t*)rv32_soc->ram;
-    //uint32_t word_address = (address - BASE_RAM) / 4;
     uint32_t offset = address - BASE_RAM;
 
     switch (width) {
@@ -932,45 +934,6 @@ void rv32_soc_write_mem(rv32_soc_td *rv32_soc, uint32_t address, uint32_t value,
         case 1:
             rv32_soc->ram[offset] = value & 0xFF;
             break;
-     /*switch (width) {
-        case 4:  // Store Word (32 bits)
-            if (address & 3) {
-                printf("Error: Dirección no alineada 0x%08x para escritura de 32 bits\n", address);
-                return;
-            }
-            mem[word_address] = value;
-            break;
-            
-        case 2:  // Store Halfword (16 bits)
-            if (address & 1) {
-                printf("Error: Dirección no alineada 0x%08x para escritura de 16 bits\n", address);
-                return;
-            }
-            if (address & 2) {
-                // Almacenar en la mitad alta (bits 16-31)
-                mem[word_address] = (mem[word_address] & 0x0000FFFF) | (value << 16);
-            } else {
-                // Almacenar en la mitad baja (bits 0-15)
-                mem[word_address] = (mem[word_address] & 0xFFFF0000) | value;
-            }
-            break;
-            
-        case 1:  // Store Byte (8 bits)
-            switch (address & 3) {
-                case 0:
-                    mem[word_address] = (mem[word_address] & 0xFFFFFF00) | value;
-                    break;
-                case 1:
-                    mem[word_address] = (mem[word_address] & 0xFFFF00FF) | (value << 8);
-                    break;
-                case 2:
-                    mem[word_address] = (mem[word_address] & 0xFF00FFFF) | (value << 16);
-                    break;
-                case 3:
-                    mem[word_address] = (mem[word_address] & 0x00FFFFFF) | (value << 24);
-                    break;
-            }
-            break;*/
         default:
             printf("Error: Ancho de escritura no soportado: %d\n", width);
             break;

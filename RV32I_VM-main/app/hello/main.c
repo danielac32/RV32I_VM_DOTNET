@@ -45,5 +45,35 @@ int main(int argc, char const *argv[])
 	printf("holaaa: %d\n",44);
 
 	printf("%s\n", buf);
+
+    // Prueba 1: kputc
+    kputc('H');
+    kputc('e');
+    kputc('l');
+    kputc('l');
+    kputc('o');
+    kputc('!');
+    kputc('\n');
+
+
+    const int height = 8;  // Altura de la pirámide
+
+    printf("Piramide de asteriscos (altura = %d):\n\n", height);
+
+    for (int i = 1; i <= height; i++)
+    {
+        // Espacios iniciales
+        for (int j = 0; j < height - i; j++)
+            printf(" ");
+
+        // Asteriscos
+        for (int k = 0; k < 2 * i - 1; k++)
+            printf("*");
+
+        // Salto de línea
+        printf("\n");
+    }
+
+    printf("\nPiramide completada!\n");
 	return 0;
 }
