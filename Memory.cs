@@ -34,26 +34,7 @@ public class RamDevice : IMemoryDevice
         return 0;
     }
   
-
-/*
-    public uint Read(uint address)
-    {
-        if (address == UartAddress)
-        {
-            // Simulación: no se lee de UART
-            return 0;
-        }
-
-        if (address >= BaseRam && address + 3 < BaseRam + _ram.Length)
-        {
-            int offset = (int)(address - BaseRam);
-            return BitConverter.ToUInt32(_ram, offset);
-        }
-
-        Console.WriteLine($"Error: Lectura en dirección inválida 0x{address:X}");
-        return 0;
-    }
-*/
+ 
 
  
 public void Write(uint address, uint value, int width)
