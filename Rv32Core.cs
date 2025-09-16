@@ -244,13 +244,17 @@ private string GetInstructionName()
 
             // ========== U-Type ==========
             case INSTR_LUI:
-                uint imm = (Instruction >> 12) & 0xFFFFF;
+                {
+                    uint imm = (Instruction >> 12) & 0xFFFFF;
                 X[Rd] = imm << 12;
+                }
                 break;
 
             case INSTR_AUIPC:
-                imm = (Instruction >> 12) & 0xFFFFF;
-                X[Rd] = (Pc - 4) + (imm << 12);
+                {
+                    uint  imm = (Instruction >> 12) & 0xFFFFF;
+                    X[Rd] = (Pc - 4) + (imm << 12);
+                }
                 break;
 
             // ========== J-Type ==========
@@ -498,6 +502,16 @@ private string GetInstructionName()
         Pc = (X[Rs1] + (uint)imm) & 0xFFFFFFFEu; // alineado a par
     }
 
+
+
+    public static uint GetCurrentMicroseconds()
+    {
+        DateTime now = DateTime.Now;
+        return (uint)((now.Hour * 3600 + now.Minute * 60 + now.Second) * 1000000 + now.Millisecond * 1000);
+    }
+
+
+
     private void ExecuteECALL()
     {
         uint syscall_num = X[17]; // a7
@@ -508,9 +522,13 @@ private string GetInstructionName()
                 char c = (char)(X[10] & 0xFF); // a0
                 Console.Write(c);
                 break;
+            case 45:
+                X[10]= GetCurrentMicroseconds();
+                break;
 
             default:
                 Console.WriteLine($"Unhandled ECALL: {syscall_num}");
+                X[10] = 1;
                 break;
         }
     }

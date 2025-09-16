@@ -2,7 +2,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <time.h>      // Para clock_gettime()
+#include <sys/time.h>
 #ifdef DEBUG
 #define DEBUG_PRINT(...) do{ printf( __VA_ARGS__ ); } while( 0 )
 #else
@@ -646,23 +647,28 @@ static void instr_ECALL(rv32_core_td *rv32_core) {
     switch(syscall_num){
       case 44:
          {
-                char c = (char)(rv32_core->x[10] & 0xFF);
-                // Debug: muestra el valor ASCII que se está imprimiendo
-                // printf("[DEBUG] Printing char: %d '%c'\n", c, c >= 32 ? c : '.');
-                putchar(c);
-                fflush(stdout); // Asegura la salida inmediata
+              uint32_t val = rv32_core->x[10];
+              char c = val & 0xFF;
+
+              putchar(c); 
+              
           }
+
       break;
+
+      case 45: // get_host_clock (microsegundos)
+      {
+          struct timespec ts;
+          clock_gettime(CLOCK_MONOTONIC, &ts);
+          
+          // Convertir a microsegundos (evita overflow hasta ~4294 segundos = 1.19 horas)
+          uint32_t microseconds = (uint32_t)((ts.tv_sec * 1000000ULL) + (ts.tv_nsec / 1000));
+          rv32_core->x[10] = microseconds;  // a0 = microsegundos
+          
+          break;
+      }
     }
-   /* printf("Registers:\n");
-    printf("syscall: %d \n", syscall_num);
-    printf("a0: 0x%08x (%d)\n", rv32_core->x[10], rv32_core->x[10]);
-    printf("a1: 0x%08x (%d)\n", rv32_core->x[11], rv32_core->x[11]);
-    printf("a2: 0x%08x (%d)\n", rv32_core->x[12], rv32_core->x[12]);
-    printf("a3: 0x%08x (%d)\n", rv32_core->x[13], rv32_core->x[13]);*/
- 
-    // Avanzar el PC normalmente (ECALL no es una instrucción de salto)
-    // Esto ya se hace automáticamente en rv32_core_fetch()
+  
 }
 
 
@@ -869,7 +875,7 @@ void rv32_core_init(rv32_core_td *rv32_core,
 typedef struct rv32_soc_struct
 {
   rv32_core_td rv32_core;
-  uint8_t ram[30000];
+  uint8_t ram[62000];
   //uint32_t rom[NR_ROM_WORDS];
   uint32_t size;
 } rv32_soc_td;
@@ -883,19 +889,20 @@ uint32_t rv32_soc_read_mem(rv32_soc_td *rv32_soc, uint32_t address) {
     if (address >= BASE_RAM  && address < BASE_RAM + sizeof(rv32_soc->ram)) {
         // Lee 4 bytes consecutivos desde la RAM (little-endian)
         uint32_t value = 0;
-        /*value |= rv32_soc->ram[address - BASE_RAM];       // Byte 0 (LSB)
-        value |= rv32_soc->ram[address - BASE_RAM + 1] << 8;  // Byte 1
-        value |= rv32_soc->ram[address - BASE_RAM + 2] << 16; // Byte 2
-        value |= rv32_soc->ram[address - BASE_RAM + 3] << 24; // Byte 3 (MSB)*/
-
-        value |= rv32_soc->ram[address - BASE_RAM + 3] << 24; // Byte 3 (MSB)
+        
+       /* value |= rv32_soc->ram[address - BASE_RAM + 3] << 24; // Byte 3 (MSB)
         value |= rv32_soc->ram[address - BASE_RAM + 2] << 16; // Byte 3 (MSB)
         value |= rv32_soc->ram[address - BASE_RAM + 1] << 8; // Byte 3 (MSB)
-        value |= rv32_soc->ram[address - BASE_RAM] ; // Byte 3 (MSB)
+        value |= rv32_soc->ram[address - BASE_RAM] & 0xFF ; // Byte 3 (MSB)*/
+        value |= rv32_soc->ram[address - BASE_RAM] << 0;     // Byte 0 (LSB)
+        value |= rv32_soc->ram[address - BASE_RAM + 1] << 8;  // Byte 1
+        value |= rv32_soc->ram[address - BASE_RAM + 2] << 16; // Byte 2
+        value |= rv32_soc->ram[address - BASE_RAM + 3] << 24; // Byte 3 (MSB)
+
         return value;
     }
     else {
-        printf("Error: Dirección no mapeada 0x%x\n", address);
+        printf("read Error: Dirección no mapeada 0x%x\n", address);
         return 0;
     }
 }
@@ -912,7 +919,7 @@ void rv32_soc_write_mem(rv32_soc_td *rv32_soc, uint32_t address, uint32_t value,
 
     // Verificar que la dirección esté en RAM
     if (address < BASE_RAM || address >= BASE_RAM + sizeof(rv32_soc->ram)) {
-        printf("Error: Dirección no mapeada 0x%08x\n", address);
+        printf("write Error: Dirección no mapeada 0x%08x\n", address);
         return;
     }
 
@@ -924,13 +931,12 @@ void rv32_soc_write_mem(rv32_soc_td *rv32_soc, uint32_t address, uint32_t value,
             rv32_soc->ram[offset+2] = (value >> 16) & 0xFF;
             rv32_soc->ram[offset+1] = (value >> 8) & 0xFF;
             rv32_soc->ram[offset]   = value & 0xFF;
+
             break;
-            
         case 2:
             rv32_soc->ram[offset+1] = (value >> 8) & 0xFF;
             rv32_soc->ram[offset]   = value & 0xFF;
             break;
-            
         case 1:
             rv32_soc->ram[offset] = value & 0xFF;
             break;
@@ -939,85 +945,7 @@ void rv32_soc_write_mem(rv32_soc_td *rv32_soc, uint32_t address, uint32_t value,
             break;
     }
 }
-
-void rv32_soc_write_mem2(rv32_soc_td *rv32_soc, uint32_t address, uint32_t value, uint8_t nr_bytes) {
-    // Verifica si la dirección está dentro de los límites de la RAM
-    if (address == 0x300000) {
-        printf("%c", (char)value); // Escribe en la UART
-        return;
-    }else 
-    if (address >= BASE_RAM  && address < BASE_RAM + sizeof(rv32_soc->ram)) {
-        // Escribe los bytes individualmente (little-endian)
-        for (uint8_t i = 0; i < nr_bytes; i++) {
-            rv32_soc->ram[address - BASE_RAM + i] = (value >> (8 * i)) & 0xFF;
-        }
-    }
-    // Dirección no válida
-    else {
-        printf("Error: Dirección no mapeada 0x%x\n", address);
-    }
-}
-/*
-uint32_t rv32_soc_read_mem(rv32_soc_td *rv32_soc, uint32_t address)
-{
-  uint8_t align_offset = address & 0x3;
-  uint32_t read_val = 0;
-  uint32_t read_val2 = 0;
-  uint32_t return_val = 0;
-
- if((address >= BASE_RAM))
-  {
-    read_val = rv32_soc->ram[(address-BASE_RAM) >> 2];//rom
-    if(align_offset)
-      read_val2 = rv32_soc->ram[((address-BASE_RAM) >> 2) + 1];
-  }
-
-  switch(align_offset)
-  {
-    case 1:
-      return_val = (read_val2 << 24) | (read_val >> 8);
-      break;
-    case 2:
-      return_val = (read_val2 << 16) | (read_val >> 16);
-      break;
-    case 3:
-      return_val = (read_val2 << 8) | (read_val >> 24);
-      break;
-    default:
-      return_val = read_val;
-      break;
-  }
-
-  return return_val;
-}
-
-void rv32_soc_write_mem(rv32_soc_td *rv32_soc, uint32_t address, uint32_t value, uint8_t nr_bytes)
-{
-  uint8_t align_offset = address & 0x3;
-  uint32_t address_for_write = 0;
-  uint8_t *ptr_address = NULL;
-
-  DEBUG_PRINT("writing value %x to address %x\n", value, address);
-
-  if(address == 0x300000)
-  {
-    printf("%c", (char) value);
-    return;
-  }
-
-
- if((address >= BASE_RAM))
-  {
-    address_for_write = (address-BASE_RAM) >> 2;
-    ptr_address = (uint8_t *)&rv32_soc->ram[address_for_write];
-  }
-  
-
-  memcpy(ptr_address+align_offset, &value, nr_bytes);
-
-  return;
-}
-*/
+ 
 
 
 void rv32_soc_init(rv32_soc_td *rv32_soc, char *rom_file_name)
@@ -1056,7 +984,7 @@ void rv32_soc_init(rv32_soc_td *rv32_soc, char *rom_file_name)
   }
   rv32_soc->size=lsize;
   uint32_t i = 0;
-  printf("RV32 ROM contents\n");
+  //printf("RV32 ROM contents\n");
   /*for(i=0;i<lsize/sizeof(uint32_t);i++)
   {
     printf("%08x\n", rv32_soc->ram[i]);
@@ -1068,6 +996,7 @@ void rv32_soc_init(rv32_soc_td *rv32_soc, char *rom_file_name)
   fclose(file);
 
   printf("RV32 SOC initialized!\n");
+  fflush(stdout);
 }
 
 int main(int argc, char *argv[])

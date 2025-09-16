@@ -13,14 +13,14 @@ RM = rm -f
 fixpath = $(strip $1)
 
  
-CFLAGS = -march=rv32i -mabi=ilp32 -ffreestanding -nostartfiles  -fno-builtin    
+CFLAGS = -march=rv32i -mabi=ilp32 -ffreestanding -nostartfiles  -fno-builtin   
 INCLUDES     =  -I ../lib
 #LDSCRIPT     =  test/link.ld -static
 LDFLAGS = -T ../lib/link.ld 
 
 
 OBJDIR        = obj
-START         = $(wildcard ../lib/boot.S) $(wildcard main.c) $(wildcard ../lib/*.c)  
+START         = $(wildcard ../lib/boot.S) $(wildcard ../lib/intr.S) $(wildcard main.c) $(wildcard ../lib/*.c)  
 STARTOBJ      = $(addprefix $(OBJDIR)/, $(addsuffix .o, $(notdir $(basename $(START)))))
 
 

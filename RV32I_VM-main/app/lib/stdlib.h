@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define RAND_MAX   2147483647 
 int abs(int);
 long labs(long);
 int atoi(char *);
@@ -32,4 +33,5 @@ void abort(void);
 //int atoi(char buf[]);
 char *itoa(int number, char *buf, uint32_t len, uint32_t base);
 char *uitoa(uint32_t number, char *buf, uint32_t len, uint32_t base);
-void ftoa(float num, float tolerance, char buf[], uint32_t n);
+//void ftoa(float num, float tolerance, char buf[], uint32_t n);
+char* ftoa(float value, int precision, char *buffer, size_t buf_size);

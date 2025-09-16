@@ -3,12 +3,13 @@
 public class RamDevice : IMemoryDevice
 {
     private readonly byte[] _ram;
-    private const uint BaseRam = 0x80000000;
+    private uint BaseRam;// = 0x80000000;
     private const uint UartAddress = 0x300000;
 
-    public RamDevice(int sizeBytes = 30000)
+    public RamDevice(uint baseAddr,int sizeBytes = 60000)
     {
         _ram = new byte[sizeBytes];
+        BaseRam = baseAddr;
     }
 
 
@@ -23,10 +24,14 @@ public class RamDevice : IMemoryDevice
         if (address >= BaseRam && address < BaseRam + _ram.Length)
         {
             uint offset = (address - BaseRam);
-            return ((uint)_ram[offset+3] <<24) | 
+            /*return ((uint)_ram[offset+3] <<24) | 
                    ((uint)_ram[offset+2] << 16) |
                    ((uint)_ram[offset+1] << 8)|
-                   (_ram[offset+0]);
+                   (_ram[offset+0]);*/
+                   return ( _ram[offset+ 0]) | 
+                   ((uint)_ram[offset+1] << 8) |
+                   ((uint)_ram[offset+2] << 16)|
+                   ((uint)_ram[offset+3] << 24);
              
         }
 

@@ -4,8 +4,7 @@
 
 static unsigned int rand_seed = 1;
 extern	int rand_r(unsigned int*);
-
-#define RAND_MAX   2147483647    /**< maximum value of int 
+   /**< maximum value of int 
 /*------------------------------------------------------------------------
  *  rand  -  Calculates a uniform random number [0, RAND_MAX]
  *------------------------------------------------------------------------

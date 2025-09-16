@@ -13,7 +13,7 @@
   void _prtX16(long num, char *str);
   void _prtl16(long num, char *str);
   void _prtl2(long num, char *str);
-  //void _prtdbl(double num, int precision, char *str);
+  void _prtdbl(double num, int precision, char *str);
 
 
 
@@ -272,7 +272,7 @@ void    _doprnt(
     char sign;                  /* Set to '-' for negative decimals     */
     char digit1;                /* Offset to add to first numeric digit */
     long larg;
-    //float darg;
+    float darg;
 
     for (;;)
     {
@@ -370,14 +370,15 @@ void    _doprnt(
             break;
             
         case 'f':
-            //darg = va_arg(ap, double);
+            darg = va_arg(ap, double);
 
-            //if (darg < 0)
-           // {
-             //   sign = '-';
-           // }
-            //ftoa(darg,str,6);
-            //_prtdbl(darg, PRECISION, str);
+            if (darg < 0)
+            {
+                sign = '-';
+            }
+           // ftoa(darg,str,6);
+            ftoa(darg,6,str,sizeof str);
+            _prtdbl(darg, PRECISION, str);
 
             break;
 
@@ -640,7 +641,7 @@ void    _doprnt(
         *str++ = temp[i--];
 }
  
-/*
+ 
   void    _prtdbl(
         double    num,
         int       precision,
@@ -660,4 +661,4 @@ void    _doprnt(
     while(*str != '\0') { str++; }
     *str++ = '.';
     _prtl10(p, str);
-}*/
+} 

@@ -7,6 +7,7 @@ _start:
 # zero-initialize register file
 addi x1, zero, 0
 la sp, _sp_top
+la gp, __global_pointer$
 # x2 (sp) is initialized by reset
 addi x3, zero, 0
 addi x4, zero, 0
@@ -79,4 +80,5 @@ __syscall:
     mv a3,a4
     mv a4,a5
     ecall
+    nop
     ret

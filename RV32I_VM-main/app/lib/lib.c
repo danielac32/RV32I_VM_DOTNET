@@ -557,6 +557,62 @@ char *uitoa(uint32_t number, char *buf, uint32_t len, uint32_t base) {
     return buf;
 }
 
+
+
+
+
+char* ftoa(float value, int precision, char *buffer, size_t buf_size) {
+    if (!buffer || buf_size < 10) return NULL;
+
+    if (precision < 0) precision = 0;
+    if (precision > 6) precision = 6;
+
+    char *buf = buffer;
+    int i;
+
+    if (value < 0) {
+        *buf++ = '-';
+        value = -value;
+    }
+
+    uint32_t integer_part = (uint32_t)value;
+    float fractional_part = value - integer_part;
+
+    char int_str[12];
+    int int_len = 0;
+    if (integer_part == 0) {
+        int_str[int_len++] = '0';
+    } else {
+        while (integer_part > 0) {
+            int_str[int_len++] = '0' + (integer_part % 10);
+            integer_part /= 10;
+        }
+    }
+
+    for (i = int_len - 1; i >= 0; i--) {
+        if (buf - buffer >= (int)buf_size - 1) break;
+        *buf++ = int_str[i];
+    }
+
+    if (precision > 0 && (buf - buffer) < (int)buf_size - 1) {
+        *buf++ = '.';
+        uint32_t frac = (uint32_t)(fractional_part * 1000000UL + 0.5f);
+        for (int p = 0; p < precision; p++) {
+            if (p < 6 && (buf - buffer) < (int)buf_size - 1) {
+                frac /= 10;
+                *buf++ = '0' + (frac % 10);
+            }
+        }
+    }
+
+    if (buf - buffer >= (int)buf_size) buf = buffer + buf_size - 1;
+    *buf = '\0';
+
+    return buffer;
+}
+
+
+
 #if 0
 /* Based on http://stackoverflow.com/a/2303798/10817 by Sophy Pal */
 void ftoa(float num, float tolerance, char buf[], uint32_t n) {
