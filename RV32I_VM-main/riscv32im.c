@@ -4,6 +4,45 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <stdbool.h>
+
+#include <sys/ioctl.h>
+#include <termios.h>
+#include <signal.h>
+#include <sys/time.h>
+
+
+
+static uint64_t GetTimeMicroseconds()
+{
+    struct timeval tv;
+    gettimeofday( &tv, 0 );
+    return tv.tv_usec + ((uint64_t)(tv.tv_sec)) * 1000000LL;
+}
+static int is_eofd;
+
+static int ReadKBByte()
+{
+    if( is_eofd ) return 0xffffffff;
+    char rxchar = 0;
+    int rread = read(fileno(stdin), (char*)&rxchar, 1);
+
+    if( rread > 0 ) // Tricky: getchar can't be used with arrow keys.
+        return rxchar;
+    else
+        return -1;
+}
+
+static int IsKBHit()
+{
+    if( is_eofd ) return -1;
+    int byteswaiting;
+    ioctl(0, FIONREAD, &byteswaiting);
+    if( !byteswaiting && write( fileno(stdin), 0, 0 ) != 0 ) { is_eofd = 1; return -1; } // Is end-of-file for 
+    return !!byteswaiting;
+}
+
+
+
 // =============================================
 // Constantes RISC-V RV32I
 // =============================================
@@ -530,19 +569,117 @@ static void execute(Rv32Core *core, RamDevice *ram) {
     core->X[XREG_ZERO] = 0;
 }
 
-static void step(Rv32Core *core, RamDevice *ram) {
+static int step(Rv32Core *core, RamDevice *ram, uint32_t elapsedUs, int count) {
 
 #define CSR( x ) core->x
 #define SETCSR( x, val ) { core->x = val; }
 #define REG( x ) core->X[x]
 #define REGSET( x, val ) { core->X[x] = val; }
 
+    // =============================================
+    // 1. Actualizar timer (timerl / timerh)
+    // =============================================
+    uint32_t new_timerl = CSR(timerl) + elapsedUs;
+    if (new_timerl < CSR(timerl)) { // Overflow
+        CSR(timerh)++;
+    }
+    CSR(timerl) = new_timerl;
 
-fetch(core, ram);
-decode(core);
-execute(core, ram);
+    // =============================================
+    // 2. Verificar si se activa la interrupción de timer (MTIP)
+    // =============================================
+    bool timer_match = false;
+    if ((CSR(timermatchh) != 0 || CSR(timermatchl) != 0)) {
+        if (CSR(timerh) > CSR(timermatchh) ||
+            (CSR(timerh) == CSR(timermatchh) && CSR(timerl) > CSR(timermatchl))) {
+            timer_match = true;
+        }
+    }
 
+    if (timer_match) {
+        CSR(mip) |= (1 << 7);      // Set MTIP (Machine Timer Interrupt Pending)
+        CSR(extraflags) &= ~4;     // Clear WFI (Wait For Interrupt)
+    } else {
+        CSR(mip) &= ~(1 << 7);     // Clear MTIP
+    }
+
+    // =============================================
+    // 3. Si está en WFI y no hay interrupciones pendientes, detenerse
+    // =============================================
+    if ((CSR(extraflags) & 4) && !(CSR(mip) & CSR(mie))) {
+        return 1; // Detenido por WFI, no ejecutar más
+    }
+
+    // =============================================
+    // 4. ¿Hay interrupción pendiente, habilitada y MIE activo?
+    // =============================================
+    if ((CSR(mip) & (1 << 7)) &&           // MTIP set
+        (CSR(mie) & (1 << 7)) &&           // MTIE enabled
+        (CSR(mstatus) & (1 << 3))) {       // MIE bit set (machine interrupt enable)
+
+        // === TRAP: TIMER INTERRUPT ===
+        // Guardar estado del contexto interrumpido
+        CSR(mepc) = CSR(Pc) - 4;           // PC anterior (porque fetch ya avanzó)
+        CSR(mcause) = (1U << 31) | 7;      // Bit 31 = interrupt, bits 30:0 = 7 (timer)
+        CSR(mtval) = 0;                    // No dirección de fallo
+        CSR(mstatus) &= ~(1 << 3);         // Clear MIE (disable interrupts during handler)
+        CSR(mstatus) |= (1 << 7);          // Set MPIE (save old MIE state)
+        CSR(mstatus) = (CSR(mstatus) & ~(3U << 11)) | (3U << 11); // Set MPP = Machine mode (11)
+
+        // Saltar al vector de interrupción
+        CSR(Pc) = CSR(mtvec);              // ¡Aquí es donde ocurre el salto!
+
+        // No ejecutar instrucciones normales ahora
+        return 0;
+    }
+
+    // =============================================
+    // 5. Ejecutar 'count' instrucciones (si no hubo trap)
+    // =============================================
+    uint32_t cycle_start = CSR(cyclel);
+    for (int icount = 0; icount < count; icount++) {
+
+        /*// Detectar ECALL (opcional, para simular syscall en M-mode)
+        if (CSR(Opcode) == 0x73 && CSR(Func3) == 0) { // ECALL
+            CSR(mcause) = (1U << 31) | 11;   // ECALL desde M-mode
+            CSR(mtval) = 0;
+            CSR(mepc) = CSR(Pc) - 4;
+            CSR(mstatus) &= ~(1 << 3);       // Clear MIE
+            CSR(mstatus) |= (1 << 7);        // Set MPIE
+            CSR(mstatus) = (CSR(mstatus) & ~(3U << 11)) | (3U << 11); // MPP = M
+            CSR(Pc) = CSR(mtvec);
+            return 0; // Trap generado, salir sin ejecutar más
+        }
+*/
+        // Ejecutar una instrucción normal
+        fetch(core, ram);
+        decode(core);
+        execute(core, ram);
+
+        // Incrementar contador de ciclos
+        CSR(cyclel)++;
+        if (CSR(cyclel) == 0) CSR(cycleh)++;
+    }
+
+    // =============================================
+    // 6. Asegurar que x0 = 0
+    // =============================================
+    REG(XREG_ZERO) = 0;
+
+    // =============================================
+    // 7. ¡IMPORTANTE! NO SOBREESCRIBIR cyclel!
+    // =============================================
+    // ❌ CORRECTO: No hagas esto:
+    // SETCSR(cyclel, cycle);  <-- ¡Esto reiniciaba el contador!
+    //
+    // ✅ CORRECTO: Deja que cyclel avance naturalmente.
+    // Ya lo hicimos dentro del bucle con CSR(cyclel)++.
+
+    return 0;
 }
+
+
+
 
 // =============================================
 // Main
@@ -578,14 +715,34 @@ int main(int argc, char *argv[]) {
     // Inicializar core
     Rv32Core core = {
         .Pc = PROGRAM_COUNTER_START_VAL,
-        .X = {0}
+        .X = {0},
     };
+    core.extraflags |= 3; // Machine-mode.
 
     printf("Emulador RISC-V iniciado.\n");
+    
+    uint64_t lastTime = GetTimeMicroseconds();
+    int instrs_per_flip = 1024;
+    int c;
 
     // Ciclo principal
     while (1) {
-        step(&core, &ram);
+        int ret;
+        uint64_t *this_ccount = ((uint64_t*)&core.cyclel);
+        uint32_t elapsedUs = GetTimeMicroseconds() / lastTime;
+        lastTime += elapsedUs;
+        ret = step(&core, &ram,elapsedUs,instrs_per_flip);
+        switch( ret )
+        {
+            case 0: break;
+            case 1: 
+                 *this_ccount += instrs_per_flip;
+            break;
+            case 3:  break;
+            case 0x7777: return 0;  //syscon code for restart
+            case 0x5555: printf( "POWEROFF@0x%08x%08x\n", core.cycleh, core.cyclel ); return 0; //syscon code for power-off
+            default: printf( "Unknown failure %d\n",ret ); break;
+        }
     }
 
     free(ram_data);
