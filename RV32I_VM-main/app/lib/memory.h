@@ -15,7 +15,7 @@ extern	unsigned int	_end;			/* End of bss segment		*/
 extern unsigned char ADDRMAX;
 
 #define MAXADDR &ADDRMAX		/* 64kB SRAM */
-#define HANDLERSTACK	1024*4			/* Size reserved for stack in Handler mode */
+#define HANDLERSTACK	1024*2		/* Size reserved for stack in Handler mode */
 #define	PAGE_SIZE	1024 // TODO: unused?
 
 /*----------------------------------------------------------------------

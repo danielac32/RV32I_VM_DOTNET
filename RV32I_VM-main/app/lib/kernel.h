@@ -109,3 +109,4 @@ int kputc(int ch);
 #define _BV(bit)                (0x01 << (bit))
 extern int ready_preemptive;
 extern void resched();
+extern void exit(int);

@@ -17,8 +17,8 @@ extern  void    _doprnt(char *, va_list, int (*)(int));
  *------------------------------------------------------------------------
  */
 
+ 
 int kputc(int c) {
-    // Usamos a0 para el carácter y a7 para el número de syscall
 
     if (c == '\n') kputc('\r');
     __asm__ volatile (
@@ -29,11 +29,6 @@ int kputc(int c) {
         : "r"(c)
         : "a0", "a7"
     );
-
-
-     /*if (c == '\n') kputc('\r');
-    
-    __syscall(44,c);*/
     return 0;
 }
 
@@ -61,7 +56,7 @@ int printf(
 
     va_start(ap, fmt);
     //_fdoprnt((char *)fmt, ap, putsyscall, 0);
-    _doprnt((char *)fmt, ap, (int (*)(int))putchar);
+    _doprnt((char *)fmt, ap, (int (*)(int))kputc);
     va_end(ap);
 
     return 0;

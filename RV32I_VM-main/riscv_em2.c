@@ -133,21 +133,20 @@ typedef struct {
 // Funciones auxiliares
 // =============================================
 
-// Lee un entero de 32 bits en little-endian desde la memoria
 static uint32_t read_word(const uint8_t *mem, uint32_t offset) {
-    return (uint32_t)(mem[offset + 0]) |
-           ((uint32_t)(mem[offset + 1]) << 8) |
-           ((uint32_t)(mem[offset + 2]) << 16) |
-           ((uint32_t)(mem[offset + 3]) << 24);
+    return (uint32_t)mem[offset] |
+           ((uint32_t)mem[offset + 1] << 8) |
+           ((uint32_t)mem[offset + 2] << 16) |
+           ((uint32_t)mem[offset + 3] << 24);
 }
 
-// Escribe un entero de 32 bits en little-endian en la memoria
 static void write_word(uint8_t *mem, uint32_t offset, uint32_t value) {
-    mem[offset + 0] = (uint8_t)(value >> 0);
+    mem[offset] = (uint8_t)(value);
     mem[offset + 1] = (uint8_t)(value >> 8);
     mem[offset + 2] = (uint8_t)(value >> 16);
     mem[offset + 3] = (uint8_t)(value >> 24);
 }
+ 
 
 // Lectura de memoria (simula acceso de 32 bits)
 static uint32_t ram_read(RamDevice *ram, uint32_t address) {
@@ -177,6 +176,7 @@ static void ram_write(RamDevice *ram, uint32_t address, uint32_t value, int widt
     uint32_t offset = address - ram->base_addr;
 
     switch (width) {
+    
         case 4:
             write_word(ram->ram, offset, value);
             break;
@@ -228,17 +228,21 @@ static int load_program(RamDevice *ram, const char *filepath) {
 // =============================================
 
 static void fetch(Rv32Core *core, RamDevice *ram) {
-    core->Instruction = ram_read(ram, core->Pc);
-    core->Pc += 4;
+   // core->Instruction = ram_read(ram, core->Pc);
+   // core->Pc += 4;
+
+  uint32_t addr = core->Pc;
+  core->Instruction = ram_read(ram, addr);
+  core->Pc += 4;
 }
 
 static void decode(Rv32Core *core) {
-    core->Opcode = (uint8_t)(core->Instruction & 0x7F);
-    core->Rd = (uint8_t)((core->Instruction >> 7) & 0x1F);
-    core->Func3 = (uint8_t)((core->Instruction >> 12) & 0x7);
-    core->Rs1 = (uint8_t)((core->Instruction >> 15) & 0x1F);
-    core->Rs2 = (uint8_t)((core->Instruction >> 20) & 0x1F);
-    core->Func7 = (uint8_t)((core->Instruction >> 25) & 0x7F);
+    core->Opcode =  (core->Instruction & 0x7F);
+    core->Rd =  ((core->Instruction >> 7) & 0x1F);
+    core->Func3 =  ((core->Instruction >> 12) & 0x7);
+    core->Rs1 =  ((core->Instruction >> 15) & 0x1F);
+    core->Rs2 =  ((core->Instruction >> 20) & 0x1F);
+    core->Func7 =  ((core->Instruction >> 25) & 0x7F);
 }
 
 static void execute_rtype(Rv32Core *core) {
@@ -457,17 +461,38 @@ static void execute_auipc(Rv32Core *core) {
 }
 
 static void execute_ecall(Rv32Core *core) {
+    // Verificar si es realmente un ECALL válido
+    // ECALL válido: todos los bits excepto opcode deben ser 0
+    uint32_t non_opcode_bits = core->Instruction & 0xFFFFFF80;
+    
+    if (non_opcode_bits != 0) {
+        /*fprintf(stderr, "¡INSTRUCCIÓN INVÁLIDA DETECTADA\n");
+        fprintf(stderr, "PC: 0x%08X, Instruction: 0x%08X\n", core->Pc - 4, core->Instruction);
+        fprintf(stderr, "Esto probablemente indica corrupción de memoria o error de ejecución\n");
+        
+        // Mostrar estado de registros para debugging
+        for (int i = 0; i < 32; i++) {
+            if (i % 8 == 0) fprintf(stderr, "\n");
+            fprintf(stderr, "x%d: 0x%08X  ", i, core->X[i]);
+        }
+        fprintf(stderr, "\n");
+        exit(1);*/
+        return;
+    }
+    
+    // Solo ejecutar ECALL si es válido
     uint32_t syscall_num = core->X[17]; // a7
     switch (syscall_num) {
         case 44: // putchar
-            putchar(core->X[10] & 0xFF); // a0
+            putchar(core->X[10] & 0xFF);
+            fflush(stdout);
             break;
-        case 45: // get microsecond (fake)
-            core->X[10] = 0; // Placeholder
+        case 45: // get microsecond
+            core->X[10] = 0;
             break;
         default:
-            fprintf(stderr, "Unhandled ECALL: %u\n", syscall_num);
-            core->X[10] = 1;
+            fprintf(stderr, "Unhandled ECALL: %u at PC=0x%08X\n", syscall_num, core->Pc - 4);
+            core->X[10] = 0;
             break;
     }
 }
@@ -528,16 +553,11 @@ static void execute(Rv32Core *core, RamDevice *ram) {
 
     // Asegurar que x0 sea 0
     core->X[XREG_ZERO] = 0;
+    core->cyclel++;
 }
 
 static void step(Rv32Core *core, RamDevice *ram) {
-
-#define CSR( x ) core->x
-#define SETCSR( x, val ) { core->x = val; }
-#define REG( x ) core->X[x]
-#define REGSET( x, val ) { core->X[x] = val; }
-
-
+ 
 fetch(core, ram);
 decode(core);
 execute(core, ram);
@@ -555,7 +575,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Inicializar RAM
-    const size_t RAM_SIZE = 62000;
+    const size_t RAM_SIZE = 220000;
     uint8_t *ram_data = malloc(RAM_SIZE);
     if (!ram_data) {
         fprintf(stderr, "No se pudo asignar memoria RAM.\n");

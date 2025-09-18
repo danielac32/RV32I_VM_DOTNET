@@ -18,7 +18,7 @@ public class Rv32Emulator
     public static void Main(string[] args)
     {
 
-        var ram = new RamDevice(Rv32Core.BASE_RAM,62000);
+        var ram = new RamDevice(Rv32Core.BASE_RAM,120000);
 
         // 2. Cargar el programa (por ejemplo, un binario RISC-V)
         try

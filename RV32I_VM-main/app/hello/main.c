@@ -270,9 +270,13 @@ void monte_carlo_pi() {
     printf("pi estimado: %f\n", pi_estimate);
     printf("Tiempo: %f segundos\n\n", time_taken);
 }
+/************************************************************************/
 
 
 
+/***********************************************************************/
+
+extern int rv32i( );
 
 int main(int argc, char const *argv[])
 {
@@ -421,7 +425,7 @@ int main(int argc, char const *argv[])
     printf("%s\n",buf );
     sprintf(buf,"numero: %d\n",count);
     printf("%s\n",buf );
-	strcpy(buf,"hola como estas");
+    strcpy(buf,"hola como estas");
     
 
     kputc('A');  // Debería imprimir 'A'
@@ -441,9 +445,9 @@ int main(int argc, char const *argv[])
 
 
 
-	printf("holaaa: %d\n",44);
+    printf("holaaa: %d\n",44);
 
-	printf("%s\n", buf);
+    printf("%s\n", buf);
 
     // Prueba 1: kputc
     kputc('H');
@@ -492,7 +496,11 @@ int main(int argc, char const *argv[])
     printf("  TODAS LAS PRUEBAS COMPLETADAS\n");
     printf("========================================\n");
    float value= 7.898;
-  printf("%f\n",value );
+    printf("%f\n",value );
+    
+printf("========================================\n");
+   rv32i();
+    printf("========================================\n");
     
     prime_calculation();
     taylor_series();
@@ -500,5 +508,5 @@ int main(int argc, char const *argv[])
   
 
 
-	return 0;
+    return 0;
 }

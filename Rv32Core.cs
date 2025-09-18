@@ -514,6 +514,10 @@ private string GetInstructionName()
 
     private void ExecuteECALL()
     {
+
+        uint non_opcode_bits = Instruction & 0xFFFFFF80;
+
+        if (non_opcode_bits != 0) return;
         uint syscall_num = X[17]; // a7
 
         switch (syscall_num)

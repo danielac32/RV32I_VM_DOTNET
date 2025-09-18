@@ -875,7 +875,7 @@ void rv32_core_init(rv32_core_td *rv32_core,
 typedef struct rv32_soc_struct
 {
   rv32_core_td rv32_core;
-  uint8_t ram[62000];
+  uint8_t ram[120000];
   //uint32_t rom[NR_ROM_WORDS];
   uint32_t size;
 } rv32_soc_td;

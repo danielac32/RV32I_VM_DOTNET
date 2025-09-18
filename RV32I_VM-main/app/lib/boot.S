@@ -55,9 +55,18 @@ call main
 loop:
 j loop
 
+
+.section .text
+.global exit
+.type   exit, @function
+
+exit:
+j exit
+
 .section .data
 .global _sp_base
 .global _sp_top
+
 
 
  
@@ -67,18 +76,4 @@ _sp_base:
 _sp_top:
 
 
-
-.section .text
-
-.global __syscall
-
-__syscall:
-    mv a7,a0
-    mv a0,a1
-    mv a1,a2
-    mv a2,a3
-    mv a3,a4
-    mv a4,a5
-    ecall
-    nop
-    ret
+ 

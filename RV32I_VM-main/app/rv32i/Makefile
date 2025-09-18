@@ -16,18 +16,18 @@ fixpath = $(strip $1)
 CFLAGS = -march=rv32i -mabi=ilp32 -ffreestanding -nostartfiles  -fno-builtin   -O1
 INCLUDES     =  -I ../lib
 #LDSCRIPT     =  test/link.ld -static
-LDFLAGS = -T ../lib/link.ld 
+LDFLAGS = -T  link.ld 
 
 
 OBJDIR        = obj
-START         = $(wildcard ../lib/boot.S) $(wildcard ../lib/intr.S) $(wildcard main.c) $(wildcard rv32i.c) $(wildcard ../lib/*.c)  
+START         = $(wildcard ../lib/boot.S) $(wildcard ../lib/intr.S) $(wildcard main.c)  $(wildcard ../lib/*.c)  
 STARTOBJ      = $(addprefix $(OBJDIR)/, $(addsuffix .o, $(notdir $(basename $(START)))))
 
 
-DOUT         = hello
+DOUT         = rv32
 
 
-SRCPATH = $(sort $(dir $(START)  ))
+SRCPATH = $(sort $(dir $(START) ))
 vpath %.c $(SRCPATH)
 vpath %.S $(SRCPATH)
 
@@ -37,8 +37,8 @@ $(OBJDIR):
 	@mkdir $@
 
 
-hello:  $(DOUT).bin
-		$(OBJDUMP) -d hello.elf > hello.list
+rv32:  $(DOUT).bin
+		$(OBJDUMP) -d rv32.elf > rv32.list
 
 
 $(DOUT).bin : $(DOUT).elf
